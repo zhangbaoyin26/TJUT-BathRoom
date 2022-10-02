@@ -64,16 +64,16 @@ if __name__ == "__main__":
 	url = baseUrl+url_book+'time='+str(local_time)+'&'+'bookstatusid='+str(input_id)
 	resp = getPage(url)
 	book_count = 0		# 每次请求不超过max_count次
-	while (book_count <= config.max_count) and (resp.get('code') == 200) and (resp.get('succeed') == 'N'):
-		book_count += 1
+	while (book_count < config.max_count) and (resp.get('code') == 200) and (resp.get('data').get('succeed') == 'N'):
 		resp = getPage(url)
 		sleep_time = config.base_time + random.uniform(0.5, 1)
 		sleep(sleep_time)
-		print('Sleep:'+str(int(1000*sleep_time))+'ms')
+		print(book_count, 'Sleep:'+str(int(1000*sleep_time))+'ms')
+		book_count += 1
 
 	# 打印预约状态
-	if (book_count <= config.max_count) and (resp.get('code') != 200):
+	if (book_count < config.max_count) and (resp.get('code') != 200):
 		print('ERR:statue_code')
-	if (book_count <= config.max_count) and (resp.get('code') == 200) and (resp.get('data').get('succeed') == 'Y'):
+	if (book_count < config.max_count) and (resp.get('code') == 200) and (resp.get('data').get('succeed') == 'Y'):
 		print('Booking_Succeed!')
 		print('Time:', resp.get('data').get('bookOrderList')[0].get('period'))
