@@ -1,8 +1,7 @@
-from time import sleep, time
+from time import sleep, time, strftime, localtime
 import requests
 import random
 import config
-
 
 true = True
 null = None
@@ -33,47 +32,63 @@ def BOOL_check_input(dat: dict, id_num: int) -> bool:
 		return False
 
 
-def cancelBook():
-	url = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/cancelOrder?time='+str(int(1000*time()))+'&bookorderid=5018797'
-
-
-
-if __name__ == "__main__":
-	baseUrl = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/'
-	url_list = 'listBookStatus?'
-	url_book = 'bookOrder?'
-	local_time = int(1000*time())
-	url = baseUrl+url_list+'time='+str(local_time)+'&'+'bathroomid=16'
-	print(url)
-
-	# 爬取浴室信息
-	resp = getPage(url)
-	data = resp.get('data').get('bookStatusList')
+def spiderRoomMsg(url):
+	res = getPage(url)
+	data = res.get('data').get('bookStatusList')
 	for value in data:
 		print('id:', value.get('id'), end=', ')
 		print('remain:', value.get('remain'), end=', ')
 		print('period:', value.get('period'), end='\n')
+	return res
 
-	# 用户输入预约时间段id
+
+def inputId(res) -> int:
 	input_id = int(input("输入预约id: "))
-	while not BOOL_check_input(data, input_id):
+	while not BOOL_check_input(res.get('data').get('bookStatusList'), input_id):
 		input_id = int(input("输入预约id: "))
+	return input_id
 
-	# 开始预约
+
+def Booking(input_id):
 	print('Found BathRoom id:', input_id)
-	url = baseUrl+url_book+'time='+str(local_time)+'&'+'bookstatusid='+str(input_id)
+	url = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/bookOrder?time=' + str(
+		int(1000 * time())) + '&bookstatusid=' + str(input_id)
 	resp = getPage(url)
-	book_count = 0		# 每次请求不超过max_count次
+	book_count = 0  # 每次请求不超过max_count次
 	while (book_count < config.max_count) and (resp.get('code') == 200) and (resp.get('data').get('succeed') == 'N'):
 		resp = getPage(url)
 		sleep_time = config.base_time + random.uniform(0.3, 0.7)
 		sleep(sleep_time)
-		print(book_count, 'Sleep:'+str(int(1000*sleep_time))+'ms')
+		print(book_count, 'Sleep:' + str(int(1000 * sleep_time)) + 'ms')
 		book_count += 1
-
 	# 打印预约状态
 	if (book_count < config.max_count) and (resp.get('code') != 200):
 		print('ERR:statue_code')
 	if (book_count < config.max_count) and (resp.get('code') == 200) and (resp.get('data').get('succeed') == 'Y'):
 		print('Booking_Succeed!')
 		print('Time:', resp.get('data').get('bookOrderList')[0].get('period'))
+
+
+def cancelBook():
+	url = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/cancelOrder?time=' + str(
+		int(1000 * time())) + '&bookorderid=5018797'
+
+
+def main():
+	t = int(strftime('%H%M%S', localtime()))
+	if (t > 220000) or (t < 65959):
+		print("此时段不能预约")
+	else:
+		url_list = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/listBookStatus?time=' + str(
+			int(1000 * time())) + '&bathroomid=16'
+		print(url_list)
+		# 爬取浴室信息
+		resp = spiderRoomMsg(url_list)
+		# 用户输入预约时间段id
+		input_id = inputId(resp)
+		# 开始预约
+		Booking(input_id)
+
+
+if __name__ == "__main__":
+	main()
