@@ -58,9 +58,12 @@ def spiderRoomMsg(url):
 
 
 def inputId(res) -> int:
-	input_id = int(input("输入预约id: "))
+	input_id = int(input("输入预约id(0重新查询): "))
 	while not BOOL_check_input(res.get('data').get('bookStatusList'), input_id):
-		input_id = int(input("输入预约id: "))
+		if input_id == 0:
+			spiderRoomMsg('http://ligong.deshineng.com:8082/brmclg/api/bathRoom/listBookStatus?time=' + str(
+							int(1000 * time())) + '&bathroomid=16')
+		input_id = int(input("输入预约id(0重新查询): "))
 	return input_id
 
 
