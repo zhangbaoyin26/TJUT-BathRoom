@@ -7,7 +7,10 @@ true = True
 null = None
 
 
-def getPage(url: str) -> dict:
+baseUrl = 'http://ligong.deshineng.com:8082/brmclg/login.html?v=12&func=null&sn=null'
+
+
+def postPage(url: str) -> dict:
 	headers = {
 		'Host': 'ligong.deshineng.com:8082',
 		'loginid': config.user.get('loginid'),
@@ -16,6 +19,18 @@ def getPage(url: str) -> dict:
 		'Referer': 'http://ligong.deshineng.com:8082/brmclg/html/main.html?v=3'
 	}
 	response = requests.post(url, headers=headers)
+	return eval(response.text)
+
+
+def getPage(url: str) -> dict:
+	headers = {
+		'Host': 'ligong.deshineng.com:8082',
+		'loginid': config.user.get('loginid'),
+		'token': config.user.get('token'),
+		'User-Agent': config.user.get('User-Agent'),
+		'Referer': 'http://ligong.deshineng.com:8082/brmclg/html/main.html?v=3'
+	}
+	response = requests.get(url, headers=headers)
 	return eval(response.text)
 
 
@@ -33,7 +48,7 @@ def BOOL_check_input(dat: dict, id_num: int) -> bool:
 
 
 def spiderRoomMsg(url):
-	res = getPage(url)
+	res = postPage(url)
 	data = res.get('data').get('bookStatusList')
 	for value in data:
 		print('id:', value.get('id'), end=', ')
@@ -49,14 +64,14 @@ def inputId(res) -> int:
 	return input_id
 
 
-def Booking(input_id):
+def Booking(input_id) -> int:
 	print('Found BathRoom id:', input_id)
 	url = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/bookOrder?time=' + str(
 		int(1000 * time())) + '&bookstatusid=' + str(input_id)
-	resp = getPage(url)
+	resp = postPage(url)
 	book_count = 0  # 每次请求不超过max_count次
 	while (book_count < config.max_count) and (resp.get('code') == 200) and (resp.get('data').get('succeed') == 'N'):
-		resp = getPage(url)
+		resp = postPage(url)
 		sleep_time = config.base_time + random.uniform(0.3, 0.7)
 		sleep(sleep_time)
 		print(book_count, 'Sleep:' + str(int(1000 * sleep_time)) + 'ms')
@@ -64,17 +79,36 @@ def Booking(input_id):
 	# 打印预约状态
 	if (book_count < config.max_count) and (resp.get('code') != 200):
 		print('ERR:statue_code')
+		return 0
 	if (book_count < config.max_count) and (resp.get('code') == 200) and (resp.get('data').get('succeed') == 'Y'):
 		print('Booking_Succeed!')
 		print('Time:', resp.get('data').get('bookOrderList')[0].get('period'))
+		return resp.get('data').get('bookOrderList')[0].get('id')
 
 
-def cancelBook():
+def checkIsBooked(id: int) -> bool:
+	if id == 0:
+		print("还未预约")
+		return False
+	else:
+		return True
+
+
+def cancelBook(id: int) -> bool:
 	url = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/cancelOrder?time=' + str(
-		int(1000 * time())) + '&bookorderid=5018797'
+		int(1000 * time())) + '&bookorderid=' + str(id)
+	resp = postPage(url)
+	if (resp.get('message') == 'Ok') and (resp.get('code') != 200):
+		print('Fail to cancel')
+		return False
+	if (resp.get('message') == 'Ok') and (resp.get('code') == 200) and (resp.get('data').get('succeed') == 'Y'):
+		print('Cancel_Succeed!')
+		return True
+
 
 
 def main():
+	bookorderid = 0
 	t = int(strftime('%H%M%S', localtime()))
 	if (t > 220000) or (t < 65959):
 		print("此时段不能预约")
@@ -87,7 +121,12 @@ def main():
 		# 用户输入预约时间段id
 		input_id = inputId(resp)
 		# 开始预约
-		Booking(input_id)
+		bookorderid = Booking(input_id)
+		BOOL_ISCANCLE = eval(input("是否取消预约： "))
+		if BOOL_ISCANCLE != 0:
+			if checkIsBooked(bookorderid):
+				cancelBook(bookorderid)
+
 
 
 if __name__ == "__main__":
