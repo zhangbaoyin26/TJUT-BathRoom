@@ -1,6 +1,9 @@
 from time import sleep, time, strftime, localtime
 import requests
 import random
+from signIn import signIn
+from checkBook import printIsBooked
+from checkBook import checkBook
 import config
 
 true = True
@@ -34,6 +37,16 @@ def getPage(url: str) -> dict:
 	return eval(response.text)
 
 
+def spiderRoomMsg(url):
+	res = postPage(url)
+	data = res.get('data').get('bookStatusList')
+	for value in data:
+		print('id:', value.get('id'), end=', ')
+		print('remain:', value.get('remain'), end=', ')
+		print('period:', value.get('period'), end='\n')
+	return res
+
+
 def BOOL_check_input(dat: dict, id_num: int) -> bool:
 	BOOL_IS_FOUND = False
 	for value in dat:
@@ -45,16 +58,6 @@ def BOOL_check_input(dat: dict, id_num: int) -> bool:
 		return True
 	else:
 		return False
-
-
-def spiderRoomMsg(url):
-	res = postPage(url)
-	data = res.get('data').get('bookStatusList')
-	for value in data:
-		print('id:', value.get('id'), end=', ')
-		print('remain:', value.get('remain'), end=', ')
-		print('period:', value.get('period'), end='\n')
-	return res
 
 
 def inputId(res) -> int:
@@ -89,14 +92,6 @@ def Booking(input_id) -> int:
 		return resp.get('data').get('bookOrderList')[0].get('id')
 
 
-def checkIsBooked(id: int) -> bool:
-	if id == 0:
-		print("还未预约")
-		return False
-	else:
-		return True
-
-
 def cancelBook(id: int) -> bool:
 	url = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/cancelOrder?time=' + str(
 		int(1000 * time())) + '&bookorderid=' + str(id)
@@ -111,24 +106,46 @@ def cancelBook(id: int) -> bool:
 
 
 def main():
-	bookorderid = 0
+	# 检查是否存在token
+	if config.user.get('token') == '':
+		if config.userName == '' and config.psd == '':
+			return
+		else:
+			config.user['token'] = signIn()
+	# 开始主程序
 	t = int(strftime('%H%M%S', localtime()))
 	if (t > 220000) or (t < 65959):
 		print("此时段不能预约")
+	# 符合预约时段
 	else:
+		config.firstBookTime = int(1000 * time())
 		url_list = 'http://ligong.deshineng.com:8082/brmclg/api/bathRoom/listBookStatus?time=' + str(
-			int(1000 * time())) + '&bathroomid=16'
+			config.firstBookTime) + '&bathroomid=16'
 		print(url_list)
 		# 爬取浴室信息
 		resp = spiderRoomMsg(url_list)
-		# 用户输入预约时间段id
-		input_id = inputId(resp)
+		# 检查是否有预约的没有使用的浴室
 		# 开始预约
-		bookorderid = Booking(input_id)
-		BOOL_ISCANCLE = eval(input("是否取消预约： "))
-		if BOOL_ISCANCLE != 0:
-			if checkIsBooked(bookorderid):
-				cancelBook(bookorderid)
+		if not printIsBooked():
+			BOOL_ISCANCLE = eval(input("是否取消预约： "))
+			if BOOL_ISCANCLE:
+				cancelBook(config.bookorderid)
+				# 用户输入预约时间段id
+				input_id = inputId(resp)
+				# 检查成功
+				config.bookorderid = Booking(input_id)
+				BOOL_ISCANCLE = eval(input("是否取消预约： "))
+				if BOOL_ISCANCLE:
+					cancelBook(config.bookorderid)
+		else:
+			# 用户输入预约时间段id
+			input_id = inputId(resp)
+			# 检查成功
+			config.bookorderid = Booking(input_id)
+			BOOL_ISCANCLE = eval(input("是否取消预约： "))
+			if BOOL_ISCANCLE:
+				cancelBook(config.bookorderid)
+
 
 
 
