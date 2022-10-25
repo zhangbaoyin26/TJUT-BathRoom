@@ -32,28 +32,3 @@ def signIn() -> str:
 	response = eval(response.text)
 	print(response.get('data').get('token'))
 	return str(response.get('data').get('token'))
-
-
-
-'''
-{"message":"Ok",
-"code":200,
-"data":{
-	"bookOrderList":[],
-	"loginid":58922,
-	"student":{
-		"id":58922,
-		"code":"20213927",
-		"name":"20213927",
-		"password":"",
-		"sex":"M",
-		"state":true,
-		"email":null,
-		"phone":null,
-		"cardNo":20213927,
-		"role":""
-	},
-	"succeed":"Y",
-	"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE2NzQyMTE1ODc3MjIsInBheWxvYWQiOiJ7XCJpZFwiOjU4OTIyLFwiY29kZVwiOlwiMjAyMTM5MjdcIixcInBhc3N3b3JkXCI6XCJiYTAyMTYwNzM2NTZjMTVlMjIzNTZjNjY4MzA4NjFkOVwiLFwic3R1ZGVudFwiOm51bGx9In0.wpGeR3r9vW2V2Reo9L_KPLS8_YwlG5DiTML1FOf9J-8"}
-}
-'''
